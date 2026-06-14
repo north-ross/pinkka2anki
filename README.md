@@ -1,5 +1,5 @@
 # pinkka2anki
-A python module to convert plant image collections from pinkka.fi to an Anki deck. Pinkka is a platform used by the University of Helsinki (and other Finnish organizations) for plant identification lessons. This set of functions can be used to collect data from Pinkka's API and convert them into Anki flashcards. Specifically it's useful for students who need to memorize latin names before a test.
+A python module to convert plant image collections from [Pinkka](https://pinkka.laji.fi) to an Anki deck. Pinkka is a platform used by the University of Helsinki (and other Finnish organizations) for plant identification lessons. This set of functions can be used to collect data from Pinkka's API and convert them into Anki flashcards. Specifically it's useful for students who need to memorize latin names before a test.
 
 If you just want to download the decks, click the one you want (.apkg file) and choose "download raw file" in the top right.
 
