@@ -4,10 +4,12 @@
 import pinkka2anki as p2a
 species_ids = p2a.get_all_species_ids(7)
 
-
 # Now I will create an Anki deck with this
 # (Only do the first 20 for speed)
-p2a.create_anki_deck(species_ids[0:20], 
-                    pinkka_name = '177')
+p2a.create_anki_deck(species_ids,
+        images_number=3, # Choose max number of images to download. Increasing will mean larger file size. I picked the first three.
+        lang='en', # Set language for taxonomy names ('fi', 'sv', or 'en')
+        pinkka_name = 'IPS-177' # Name to include in the output files
+        )
 
-# Now just import this .apkg file into Anki
+# After running, import this .apkg file into Anki

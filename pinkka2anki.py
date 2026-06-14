@@ -10,7 +10,7 @@ def get_all_species_ids(pinkka_id):
     """Fetch all species IDs from a pinkka and its subPinkkas"""
     
     # Get the list of sub pinkkas
-    pinkka_response = requests.get(f"{BASE_URL}/pinkkas/{pinkka_id}")
+    pinkka_response = requests.get(f"{BASE_URL}/pinkkas/{pinkka_id}", timeout=120)
     pinkka_data = pinkka_response.json()
     
     sub_pinkkas = pinkka_data.get('subPinkkas', [])
@@ -24,7 +24,7 @@ def get_all_species_ids(pinkka_id):
         sub_name = sub_pinkka['name'].get('en', sub_pinkka['name'].get('fi', 'Unknown'))
         
         # Step 3: Get species from this subPinkka
-        sub_response = requests.get(f"{BASE_URL}/subpinkkas/{sub_id}")
+        sub_response = requests.get(f"{BASE_URL}/subpinkkas/{sub_id}", timeout=120)
         sub_data = sub_response.json()
 
         # Extract species/taxon IDs (adjust key name based on actual JSON structure)
@@ -45,12 +45,13 @@ MODEL = Model(
     fields=[
         {'name': 'Image', 'sticky': False},
         {'name': 'Species Name', 'sticky': False},
+        {'name': 'Family', 'sticky': False},
     ],
     templates=[
         {
             'name': 'Card 1',
             'qfmt': '{{Image}}',
-            'afmt': '{{FrontSide}}<hr id="answer">{{Species Name}}',
+            'afmt': '{{FrontSide}}<hr id="answer"><i>{{Species Name}}</i><br><b>{{Family}}</b>',
         },
     ]
 )
@@ -65,7 +66,7 @@ def fetch_species_data(species_id):
         print(f"Error fetching species {species_id}: {e}")
         return None
 
-def download_image(image_url, species_id):
+def download_image(image_url, species_id, i):
     """_summary_
 
     Args:
@@ -84,7 +85,7 @@ def download_image(image_url, species_id):
         media_dir.mkdir(exist_ok=True)
         
         # Save image
-        filename = f"species_{species_id}.jpg"
+        filename = f"species_{species_id}_{i}.jpg"
         filepath = media_dir / filename
         
         with open(filepath, 'wb') as f:
@@ -95,7 +96,7 @@ def download_image(image_url, species_id):
         return None
 
 
-def create_anki_deck(species_list, images_number=2, lang='en', pinkka_name = '177'):
+def create_anki_deck(species_list, images_number=3, lang='en', pinkka_name = '177'):
     """Creates an Anki package (.apkg) from a provided list of species IDs. 
         Downloads the specified number of images. 
 
@@ -120,23 +121,35 @@ def create_anki_deck(species_list, images_number=2, lang='en', pinkka_name = '17
         
         # Extract species name, image URLs, taxonomy info
         species_name = data.get('scientificName')
-        taxonomy_dict = {}
+        taxonomy_list = []
+        family = ""
         for taxa in data.get('taxonomy'):
-            taxonomy_dict[taxa['rankName'][lang]] = taxa['scientificName']
+            taxatag = f"{taxa['rankName'][lang]}-{taxa['scientificName']}"
+            taxatag = taxatag.replace(" ", "_")
+            taxonomy_list.append(taxatag)
+            if taxa['rankName']['en'] == "family":
+                family = taxa['scientificName']
             
-        # download image 
-        image_url = data.get('images')[0]['urls']['square']
-        image_path = download_image(image_url, species_id)
-        # add path to media list
-        media_list.append(image_path)
+        # If user requested more images than exist, limit to existing number
+        if images_number > len(data.get('images')):
+            images_number = len(data.get('images'))
+        
+        # loop over images and download
+        img_field = ""
+        for i in range(0, images_number):
+            image_url = data.get('images')[i]['urls']['square']
+            image_path = download_image(image_url, species_id, i)
+            # add path to media list
+            media_list.append(image_path)
 
-        # format for field
-        img_field = f"<img src=\"{image_path.name}\">"
+            # format for field
+            img_field = f"{img_field} <img src=\"{image_path.name}\">"
+
         # Create Anki note
         note = Note(
             model=MODEL,
-            fields=[img_field, species_name],
-            tags=taxonomy_dict
+            fields=[img_field, species_name, family],
+            tags=taxonomy_list
         )
         deck.add_note(note)
 
