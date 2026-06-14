@@ -110,7 +110,7 @@ def create_anki_deck(species_list, images_number=3, image_size="square", lang='e
         pinkka_name (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
     """
     deck_id = int(time.time() * 1000)  # Unique deck ID safe for SQLite integer
-    deck = Deck(deck_id, f'Pinkka {pinkka_name} Species')
+    deck = Deck(deck_id, f'Pinkka {pinkka_name}')
     media_list = []
     
     for species_id in species_list:
