@@ -96,7 +96,7 @@ def download_image(image_url, species_id, i):
         return None
 
 
-def create_anki_deck(species_list, images_number=3, lang='en', pinkka_name = '177'):
+def create_anki_deck(species_list, images_number=3, image_size="square", lang='en', pinkka_name = '177'):
     """Creates an Anki package (.apkg) from a provided list of species IDs. 
         Downloads the specified number of images. 
 
@@ -105,6 +105,7 @@ def create_anki_deck(species_list, images_number=3, lang='en', pinkka_name = '17
             Get using pinkka2anki.get_all_species_ids().
         images_number (int, optional): Number of images to download and include in the card. 
             Choose 100 for maximum (will not cause error). Defaults to 2.
+        image_size (str, optional): Set size of downloaded images: "original" > "full" > "large" > "square" > "thumbnail". 
         lang (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
         pinkka_name (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
     """
