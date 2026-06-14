@@ -1,6 +1,8 @@
 # pinkka2anki
  A python package to convert plant image collections from pinkka.fi to an Anki deck.
 
+If you just want to download the decks, click the one you want (.apkg file) and choose "download raw file" in the top right.
+
 I have been studying Finnish plants using Pinkka, but I thought it would be useful to have the spaced repetition from Anki, plus the ability to study one family at a time.
 
 Unfortunately, I couldn't get it to work using the image URLs, so it needs to download all the images. I used the medium-size "square" resolution as deafault, but the script can be configured to use "thumbnail" instead. For reference, three "square"-size images for 652 species resulted in a 47 MB Anki package.
