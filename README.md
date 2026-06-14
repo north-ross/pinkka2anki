@@ -27,3 +27,5 @@ It also has the whole taxonomy as tags, so you can filter your deck to study one
 You can import this on to your phone and use the Anki app to study. It's free on Android but the iOS app has a small fee.
 
 If you have found this useful this consider donating to the free and open source software [Anki](https://apps.ankiweb.net/).
+
+Disclaimer: Some code advice came from [duck.ai](https://duck.ai) (Claude Haiku 4.5).
