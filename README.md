@@ -1,7 +1,7 @@
 # pinkka2anki
 A python module to convert plant image collections from [Pinkka](https://pinkka.laji.fi) to an Anki deck. Pinkka is a platform used by the University of Helsinki (and other Finnish organizations) for plant identification lessons. This set of functions can be used to collect data from Pinkka's API and convert them into Anki flashcards. Specifically it's useful for students who need to memorize latin names before a test.
 
-If you just want to download the decks, click the one you want (.apkg file) and choose "download raw file" in the top right.
+If you just want to download the IPS-154 deck, follow [this link](https://github.com/north-ross/pinkka2anki/blob/main/pinkka_IPS-154_subarctic_habitats.apkg) and choose "download raw file" in the top right.
 
 I have been studying Finnish plants using Pinkka, but I thought it would be useful to have the spaced repetition from Anki, plus the ability to study one family at a time.
 
