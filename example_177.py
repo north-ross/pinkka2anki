@@ -14,7 +14,7 @@ p2a.create_anki_deck(species_ids,
         image_size="thumbnail", 
 
         lang='en', # Set language for taxonomy names ('fi', 'sv', or 'en')
-        pinkka_name = 'IPS-153 Subarctic Flora' # Name to include in the output files
+        pinkka_name = 'IPS-154 Subarctic Biota' # Name to include in the output files
         )
 
 # After running, import this .apkg file into Anki
