@@ -138,7 +138,7 @@ def create_anki_deck(species_list, images_number=3, image_size="square", lang='e
         # loop over images and download
         img_field = ""
         for i in range(0, images_number):
-            image_url = data.get('images')[i]['urls']['square']
+            image_url = data.get('images')[i]['urls'][image_size]
             image_path = download_image(image_url, species_id, i)
             # add path to media list
             media_list.append(image_path)
