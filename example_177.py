@@ -2,7 +2,7 @@
 # The URL is https://pinkka.laji.fi/pinkat/#/pinkkas/7
 # So, the ID needed is "7". Get a list of species IDs:
 import pinkka2anki as p2a
-species_ids = p2a.get_all_species_ids(7)
+species_ids = p2a.get_all_species_ids(68)
 
 # Now I will create an Anki deck with this
 # (Only do the first 20 for speed)
