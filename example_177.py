@@ -8,13 +8,13 @@ species_ids = p2a.get_all_species_ids(68)
 # (Only do the first 20 for speed)
 p2a.create_anki_deck(species_ids,
         # Choose max number of images to download. Most plants have 10 images total. Increasing will mean larger file size. I picked the first four.
-        images_number=4, 
+        req_images_number=4, 
 
         # Pick image resolution from this list: "original" > "full" > "large" > "square" > "thumbnail".
-        image_size="thumbnail", 
+        image_size="square", 
 
         lang='en', # Set language for taxonomy names ('fi', 'sv', or 'en')
-        pinkka_name = 'IPS-154 Subarctic Biota' # Name to include in the output files
+        pinkka_name = 'IPS-154 Subarctic Habitats and Biota' # Name to include in the output files
         )
 
 # After running, import this .apkg file into Anki

@@ -7,7 +7,8 @@ from genanki import Deck, Note, Model, Package
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
 
 def get_all_species_ids(pinkka_id):
-    """Fetch all species IDs from a pinkka and its subPinkkas"""
+    """Fetch all species IDs and sub name from a pinkka and its subPinkkas
+    Returns a nested list with pairs of values (species ID, subPinkka name)"""
     
     # Get the list of sub pinkkas
     pinkka_response = requests.get(f"{BASE_URL}/pinkkas/{pinkka_id}", timeout=120)
@@ -29,7 +30,7 @@ def get_all_species_ids(pinkka_id):
 
         # Extract species/taxon IDs (adjust key name based on actual JSON structure)
         species_in_sub = sub_data.get('speciesCards', [])  # or 'species', 'cards', etc.
-        taxon_ids = [s['id'] for s in species_in_sub]
+        taxon_ids = [[s['id'], sub_name] for s in species_in_sub]
 
         print(f"  {sub_name}: {len(taxon_ids)} species")
         all_taxon_ids.extend(taxon_ids)
@@ -46,6 +47,7 @@ MODEL = Model(
         {'name': 'Image', 'sticky': False},
         {'name': 'Species Name', 'sticky': False},
         {'name': 'Family', 'sticky': False},
+        {'name': 'Finnish Name', 'sticky': False}
     ],
     templates=[
         {
@@ -62,7 +64,7 @@ def fetch_species_data(species_id):
         response = requests.get(f"{BASE_URL}/speciescards/{species_id}", timeout=100)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"Error fetching species {species_id}: {e}")
         return None
 
@@ -71,49 +73,56 @@ def download_image(image_url, species_id, i):
 
     Args:
         image_url (_type_): _description_
-        species_id (_type_): _description_
+        species_id (str): _description_
+        i (int): image number for this species
 
     Returns:
-        _type_: _description_
+        pathlib.Path: path to to the saved image
     """
-    try:
-        response = requests.get(image_url, timeout=10)
-        response.raise_for_status()
-        
-        # Create media folder
-        media_dir = Path("pinkka_media")
-        media_dir.mkdir(exist_ok=True)
-        
-        # Save image
-        filename = f"species_{species_id}_{i}.jpg"
-        filepath = media_dir / filename
-        
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
+    # Create media folder
+    media_dir = Path("pinkka_media")
+    media_dir.mkdir(exist_ok=True)
+
+    filename = f"species_{species_id}_{i}.jpg"
+    filepath = media_dir / filename
+
+    # If image was already downloaded then skip
+    if not filepath.exists():
+        try:
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            
+            # Save image
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+            return filepath
+        except Exception as e:
+            print(f"Error downloading image for {species_id}: {e}")
+            return None
+    else:
         return filepath
-    except Exception as e:
-        print(f"Error downloading image for {species_id}: {e}")
-        return None
 
 
-def create_anki_deck(species_list, images_number=3, image_size="square", lang='en', pinkka_name = '177'):
+def create_anki_deck(species_list, req_images_number=4, image_size="square", lang='en', pinkka_name = 'My Pinkka Deck'):
     """Creates an Anki package (.apkg) from a provided list of species IDs. 
         Downloads the specified number of images. 
 
     Args:
         species_list (list): List of species IDs from the Pinkka API. 
             Get using pinkka2anki.get_all_species_ids().
-        images_number (int, optional): Number of images to download and include in the card. 
-            Choose 100 for maximum (will not cause error). Defaults to 2.
+        req_images_number (int, optional): Number of requested images to download and include in the card. 
+            Choose 100 for maximum (will not cause error). Defaults to 4.
         image_size (str, optional): Set size of downloaded images: "original" > "full" > "large" > "square" > "thumbnail". 
         lang (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
         pinkka_name (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
     """
     deck_id = int(time.time() * 1000)  # Unique deck ID safe for SQLite integer
-    deck = Deck(deck_id, f'Pinkka {pinkka_name}')
+    deck = Deck(deck_id, f'{pinkka_name}')
     media_list = []
     
-    for species_id in species_list:
+    for species in species_list:
+        species_id = species[0]
+        sub_pinkka = species[1]
         data = fetch_species_data(species_id)
         print(f"got data for {species_id} ({data.get('scientificName')})")
         if not data:
@@ -122,41 +131,58 @@ def create_anki_deck(species_list, images_number=3, image_size="square", lang='e
         
         # Extract species name, image URLs, taxonomy info
         species_name = data.get('scientificName')
+        taxon_id = data.get('taxonId')
+        try:
+            finnish_name = data.get('vernacularName')['fi']
+        except KeyError:
+            finnish_name = ""
+
         taxonomy_list = []
         family = ""
         for taxa in data.get('taxonomy'):
-            taxatag = f"{taxa['rankName'][lang]}-{taxa['scientificName']}"
-            taxatag = taxatag.replace(" ", "_")
-            taxonomy_list.append(taxatag)
-            if taxa['rankName']['en'] == "family":
-                family = taxa['scientificName']
+            if taxa['rankName']['en'] in ['phylum', 'class', 'family']:
+                taxatag = f"{taxa['rankName'][lang]}-{taxa['scientificName']}"
+                taxatag = taxatag.replace(" ", "_")
+                taxonomy_list.append(taxatag)
+                if taxa['rankName']['en'] == "family":
+                    family = taxa['scientificName']
             
         # If user requested more images than exist, limit to existing number
-        if images_number > len(data.get('images')):
+        if req_images_number > len(data.get('images')):
             images_number = len(data.get('images'))
+        else: images_number = req_images_number
         
         # loop over images and download
-        img_field = ""
-        for i in range(0, images_number):
-            image_url = data.get('images')[i]['urls'][image_size]
-            image_path = download_image(image_url, species_id, i)
-            # add path to media list
-            media_list.append(image_path)
+        if images_number > 0:
+            img_field = ""
+            print("\t", images_number, "images available")
+            for i in range(0, images_number):
+                image_url = data.get('images')[i]['urls'][image_size]
+                image_path = download_image(image_url, taxon_id.replace(".", "-"), i)
+                # add path to media list
+                media_list.append(image_path)
 
-            # format for field
-            img_field = f"{img_field} <img src=\"{image_path.name}\">"
+                # format for field
+                img_field = f"{img_field} <img src=\"{image_path.name}\">"
+        else:
+            print("\tNo Images Available. Skipping")
+            continue
 
         # Create Anki note
         note = Note(
             model=MODEL,
-            fields=[img_field, species_name, family],
-            tags=taxonomy_list
+            fields=[img_field, species_name, family, finnish_name],
+            sort_field=species_name,
+            tags= taxonomy_list.append(sub_pinkka),
+            guid=taxon_id
         )
         deck.add_note(note)
 
     # pack to package with media
     package = Package(deck)
     package.media_files = media_list
+    
+    print(f"Created notes for {len(deck.notes)} / {len(species_list)} species")
     # Save deck
     package.write_to_file(f'pinkka_{pinkka_name}_species.apkg')
     print(f"Anki deck created: pinkka_{pinkka_name}_species.apkg")
