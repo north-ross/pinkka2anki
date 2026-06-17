@@ -39,21 +39,21 @@ def get_all_species_ids(pinkka_id):
     return all_taxon_ids
 
 # Create Anki model (front: image, back: species name)
-model_id = 1234567890
+model_id = 1234567899
 MODEL = Model(
     model_id,
-    'Pinkka Species',
+    'Pinkka Species1',
     fields=[
-        {'name': 'Image', 'sticky': False},
         {'name': 'Species Name', 'sticky': False},
+        {'name': 'Images', 'sticky': False},
         {'name': 'Family', 'sticky': False},
         {'name': 'Finnish Name', 'sticky': False}
     ],
     templates=[
         {
-            'name': 'Card 1',
-            'qfmt': '{{Image}}',
-            'afmt': '{{FrontSide}}<hr id="answer"><i>{{Species Name}}</i><br><b>{{Family}}</b>',
+            'name': 'Card1',
+            'qfmt': '{{Images}}',
+            'afmt': '{{FrontSide}}<hr id="answer"><i>{{Species Name}}</i><br><b>{{Family}}</b><br>{{Finnish Name}}',
         },
     ]
 )
@@ -103,7 +103,7 @@ def download_image(image_url, species_id, i):
         return filepath
 
 
-def create_anki_deck(species_list, req_images_number=4, image_size="square", lang='en', pinkka_name = 'My Pinkka Deck'):
+def create_anki_deck(species_list, req_images_number=4, image_size="square", lang='en', pinkka_name = 'My Pinkka Deck', make_subdecks=False):
     """Creates an Anki package (.apkg) from a provided list of species IDs. 
         Downloads the specified number of images. 
 
@@ -115,9 +115,24 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         image_size (str, optional): Set size of downloaded images: "original" > "full" > "large" > "square" > "thumbnail". 
         lang (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
         pinkka_name (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
+        make_subdecks (boolean, optional): Generate subdecks from the subPinkkas
     """
-    deck_id = int(time.time() * 1000)  # Unique deck ID safe for SQLite integer
-    deck = Deck(deck_id, f'{pinkka_name}')
+    if make_subdecks:
+        sub_pinkkas = set([x[1] for x in species_list])
+        subdecks_dict = {}
+        deck_id=1
+        for sub_pinkka in sub_pinkkas:
+            #TODO Fix it seems to only be getting the first one
+            subdeck = Deck(deck_id, f"{pinkka_name}::{sub_pinkka}" )
+            subdecks_dict[sub_pinkka] = subdeck
+            print(f"{subdeck.name} created")
+            deck_id+=1
+
+    else:
+        deck_id = int(time.time() * 1000)  # Unique deck ID safe for SQLite integer
+        deck = Deck(deck_id, f'{pinkka_name}')
+
+
     media_list = []
     
     for species in species_list:
@@ -140,18 +155,21 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         taxonomy_list = []
         family = ""
         for taxa in data.get('taxonomy'):
-            if taxa['rankName']['en'] in ['phylum', 'class', 'family']:
+            if taxa['rankName']['en'] in ['phylum', 'family']:
                 taxatag = f"{taxa['rankName'][lang]}-{taxa['scientificName']}"
                 taxatag = taxatag.replace(" ", "_")
                 taxonomy_list.append(taxatag)
                 if taxa['rankName']['en'] == "family":
                     family = taxa['scientificName']
-            
+
+        # add sub pinkka as tag
+        taxonomy_list.append(sub_pinkka.replace(" ", "_"))
+
         # If user requested more images than exist, limit to existing number
         if req_images_number > len(data.get('images')):
             images_number = len(data.get('images'))
         else: images_number = req_images_number
-        
+
         # loop over images and download
         if images_number > 0:
             img_field = ""
@@ -171,18 +189,28 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         # Create Anki note
         note = Note(
             model=MODEL,
-            fields=[img_field, species_name, family, finnish_name],
-            sort_field=species_name,
-            tags= taxonomy_list.append(sub_pinkka),
+            fields=[species_name, img_field, family, finnish_name],
+            sort_field="Species Name",
+            tags= taxonomy_list,
             guid=taxon_id
         )
-        deck.add_note(note)
+        if make_subdecks:
+            subdecks_dict[sub_pinkka].add_note(note)
+            print(f"\tadded to {subdecks_dict[sub_pinkka].name}")
+        else:
+            deck.add_note(note)
 
     # pack to package with media
-    package = Package(deck)
+    if make_subdecks:
+        package = Package(subdecks_dict.values())
+        total_notes = sum([len(deck.notes) for deck in subdecks_dict.values()])
+    else: 
+        package = Package(deck)
+        total_notes = len(deck.notes)
+    print(f"Created notes for {total_notes} / {len(species_list)} species")
     package.media_files = media_list
     
-    print(f"Created notes for {len(deck.notes)} / {len(species_list)} species")
     # Save deck
-    package.write_to_file(f'pinkka_{pinkka_name}_species.apkg')
-    print(f"Anki deck created: pinkka_{pinkka_name}_species.apkg")
+    outfile = f'pinkka_{pinkka_name.replace(" ", "_")}.apkg'
+    package.write_to_file(outfile)
+    print(f"Anki deck created: {outfile}")
