@@ -47,13 +47,14 @@ MODEL = Model(
         {'name': 'Species Name', 'sticky': False},
         {'name': 'Images', 'sticky': False},
         {'name': 'Family', 'sticky': False},
-        {'name': 'Finnish Name', 'sticky': False}
+        {'name': 'Finnish Name', 'sticky': False},
+        {'name': 'Pinkka URL', 'sticky': False}
     ],
     templates=[
         {
             'name': 'Card1',
             'qfmt': '{{Images}}',
-            'afmt': '{{FrontSide}}<hr id="answer"><i>{{Species Name}}</i><br><b>{{Family}}</b><br>{{Finnish Name}}',
+            'afmt': '{{FrontSide}}<hr id="answer"><i><a href="{{Pinkka URL}}">{{Species Name}}</a></i><br><b>{{Family}}</b><br>{{Finnish Name}}',
         },
     ]
 )
@@ -166,8 +167,9 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         taxonomy_list.append(sub_pinkka.replace(" ", "_"))
 
         # If user requested more images than exist, limit to existing number
-        if req_images_number > len(data.get('images')):
-            images_number = len(data.get('images'))
+        max_images = len(data.get('images'))
+        if req_images_number > max_images:
+            images_number = max_images
         else: images_number = req_images_number
 
         # loop over images and download
@@ -175,8 +177,13 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
             img_field = ""
             print("\t", images_number, "images available")
             for i in range(0, images_number):
-                image_url = data.get('images')[i]['urls'][image_size]
-                image_path = download_image(image_url, taxon_id.replace(".", "-"), i)
+                # get first half of images from start
+                if i <= round(images_number/2):
+                    image_i = i
+                else: # get the rest of images from the end of the list
+                    image_i = max_images - (images_number-i)
+                image_url = data.get('images')[image_i]['urls'][image_size]
+                image_path = download_image(image_url, taxon_id.replace(".", "-"), image_i)
                 # add path to media list
                 media_list.append(image_path)
 
@@ -185,12 +192,12 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         else:
             print("\tNo Images Available. Skipping")
             continue
-
+        # Pinkka URL
+        species_url = f"https://pinkka.laji.fi/pinkat/#/speciescards/{species_id}"
         # Create Anki note
         note = Note(
             model=MODEL,
-            fields=[species_name, img_field, family, finnish_name],
-            sort_field="Species Name",
+            fields=[species_name, img_field, family, finnish_name, species_url],
             tags= taxonomy_list,
             guid=taxon_id
         )
@@ -203,6 +210,7 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
     # pack to package with media
     if make_subdecks:
         package = Package(subdecks_dict.values())
+        print(f"Decks: {[x.name for x in subdecks_dict.values()]}")
         total_notes = sum([len(deck.notes) for deck in subdecks_dict.values()])
     else: 
         package = Package(deck)

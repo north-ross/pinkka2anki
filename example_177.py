@@ -6,8 +6,8 @@ species_ids = p2a.get_all_species_ids(68)
 
 # Now I will create an Anki deck with this
 p2a.create_anki_deck(species_ids,
-        # Choose max number of images to download. Most plants have 10 images total. 
-        # Increasing will mean larger file size. I picked the first four.
+        # Choose max number of images to download. Most plants have 10 images total. It will get half from the beginning and half from the end of the list.
+        # Increasing will mean larger file size. I picked the first and last two (four total).
         req_images_number=4, 
 
         # Pick image resolution from this list: 
